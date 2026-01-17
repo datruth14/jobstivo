@@ -18,6 +18,8 @@ import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 
+export const dynamic = 'force-dynamic';
+
 export default function Dashboard() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
