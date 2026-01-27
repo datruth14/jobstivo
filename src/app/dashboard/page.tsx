@@ -4,7 +4,7 @@ import { StatsBar } from "@/components/dashboard/StatsBar";
 import { FileUpload } from "@/components/dashboard/FileUpload";
 import { ManualForm } from "@/components/dashboard/ManualForm";
 import { JobFeed } from "@/components/dashboard/JobFeed";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { Wand2, Menu, CheckCircle2, X } from "lucide-react";
 import { Sidebar } from "@/components/dashboard/Sidebar";
 
@@ -20,7 +20,7 @@ import { useEffect } from "react";
 
 export const dynamic = 'force-dynamic';
 
-export default function Dashboard() {
+function DashboardContent() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const { userCV, updateCV, createCV } = useWallet();
@@ -203,5 +203,13 @@ export default function Dashboard() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><div className="animate-pulse text-slate-400">Loading...</div></div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }
