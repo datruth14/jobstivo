@@ -219,7 +219,7 @@ export async function generateAndSaveCV(userCV: string, jobDescription: string, 
 
         return {
             success: true,
-            cvId: savedCV._id.toString(),
+            cvId: savedCV?._id?.toString() || "",
             cvContent: htmlCV
         };
 
