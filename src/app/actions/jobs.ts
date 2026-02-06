@@ -101,22 +101,24 @@ export async function getJobs(query: string = "Developer", page: number = 1, loc
                 }
 
                 // Map JSearch API response to our interface
-                const jobs: JSearchJob[] = data.data.map((job: any) => ({
-                    job_id: job.job_id || Math.random().toString(),
-                    job_title: job.job_title || "Untitled Position",
-                    employer_name: job.employer_name || "Company",
-                    job_city: job.job_city || "",
-                    job_country: job.job_country || "",
-                    job_description: job.job_description || `${job.job_title} position at ${job.employer_name}.`,
-                    job_apply_link: job.job_apply_link || "",
-                    job_posted_at_datetime_utc: job.job_posted_at_datetime_utc || new Date().toISOString(),
-                    job_employment_type: job.job_employment_type || "FULLTIME",
-                    job_min_salary: job.job_min_salary || null,
-                    job_max_salary: job.job_max_salary || null,
-                    job_salary_currency: job.job_salary_currency || null,
-                    job_is_remote: job.job_is_remote || false,
-                    source: "JSearch API"
-                }));
+                const jobs: JSearchJob[] = data.data
+                    .filter((job: any) => job.job_id) // Filter out jobs without an ID
+                    .map((job: any) => ({
+                        job_id: job.job_id,
+                        job_title: job.job_title || "Untitled Position",
+                        employer_name: job.employer_name || "Company",
+                        job_city: job.job_city || "",
+                        job_country: job.job_country || "",
+                        job_description: job.job_description || `${job.job_title} position at ${job.employer_name}.`,
+                        job_apply_link: job.job_apply_link || "",
+                        job_posted_at_datetime_utc: job.job_posted_at_datetime_utc || new Date().toISOString(),
+                        job_employment_type: job.job_employment_type || "FULLTIME",
+                        job_min_salary: job.job_min_salary || null,
+                        job_max_salary: job.job_max_salary || null,
+                        job_salary_currency: job.job_salary_currency || null,
+                        job_is_remote: job.job_is_remote || false,
+                        source: "JSearch API"
+                    }));
 
                 console.log(`✅ Success with JSearch API key #${keyNumber}! Found ${jobs.length} jobs.`);
 
@@ -153,4 +155,97 @@ export async function getJobs(query: string = "Developer", page: number = 1, loc
             source: "JSearch API"
         };
     }
+}
+
+export async function getJobById(jobId: string) {
+    console.log(`Fetching specific job details for ID: ${jobId}`);
+
+    // Get all available JSearch API keys
+    const apiKeys = [
+        process.env.RAPIDAPI_KEY,
+        process.env.RAPIDAPI_KEY_2,
+        process.env.RAPIDAPI_KEY_3,
+        process.env.RAPIDAPI_KEY_4,
+        process.env.RAPIDAPI_KEY_5,
+        process.env.RAPIDAPI_KEY_6,
+        process.env.RAPIDAPI_KEY_7,
+        process.env.RAPIDAPI_KEY_8,
+        process.env.RAPIDAPI_KEY_9,
+        process.env.RAPIDAPI_KEY_10,
+    ].filter(Boolean);
+
+    if (apiKeys.length === 0) {
+        return { success: false, error: "No API keys available" };
+    }
+
+    let lastError = null;
+
+    // Decode ID to handle cases where it might be double-encoded or contain special chars
+    const decodedJobId = decodeURIComponent(jobId);
+
+    for (let i = 0; i < apiKeys.length; i++) {
+        const apiKey = apiKeys[i];
+
+        try {
+            const jsearchUrl = `https://jsearch.p.rapidapi.com/job-details?job_id=${encodeURIComponent(decodedJobId)}`;
+
+            console.log(`[getJobById] Fetching URL: ${jsearchUrl}`);
+            console.log(`[getJobById] Original ID: "${jobId}", Decoded ID: "${decodedJobId}"`);
+
+            const response = await fetch(jsearchUrl, {
+                method: "GET",
+                headers: {
+                    "x-rapidapi-key": apiKey as string,
+                    "x-rapidapi-host": "jsearch.p.rapidapi.com",
+                },
+            });
+
+            if (response.status === 429) {
+                lastError = `Key #${i + 1} quota exceeded`;
+                continue;
+            }
+
+            if (!response.ok) {
+                lastError = `API error: ${response.status}`;
+                continue;
+            }
+
+            const data = await response.json();
+
+            if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+                const jobData = data.data[0];
+
+                // Map to our interface
+                const job: JSearchJob = {
+                    job_id: jobData.job_id,
+                    job_title: jobData.job_title,
+                    employer_name: jobData.employer_name,
+                    job_city: jobData.job_city,
+                    job_country: jobData.job_country,
+                    job_description: jobData.job_description,
+                    job_apply_link: jobData.job_apply_link,
+                    job_posted_at_datetime_utc: jobData.job_posted_at_datetime_utc,
+                    job_employment_type: jobData.job_employment_type,
+                    job_min_salary: jobData.job_min_salary,
+                    job_max_salary: jobData.job_max_salary,
+                    job_salary_currency: jobData.job_salary_currency,
+                    job_is_remote: jobData.job_is_remote,
+                    source: "JSearch API"
+                };
+
+                return { success: true, job };
+            } else {
+                return { success: false, error: "Job details not found in API response" };
+            }
+
+        } catch (error: any) {
+            lastError = error.message;
+            continue;
+        }
+    }
+
+    return {
+        success: false,
+        error: `Failed to fetch job details. Last error: ${lastError}`
+    };
 }

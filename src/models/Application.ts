@@ -7,6 +7,7 @@ export interface IApplication {
     jobTitle: string;
     company: string;
     coverLetter: string;
+    cvContent?: string;
     applyLink?: string;
     coinsSpent: number;
     status: 'pending' | 'applied' | 'failed';
@@ -38,6 +39,9 @@ const ApplicationSchema = new Schema<IApplication>(
             required: true,
         },
         applyLink: {
+            type: String,
+        },
+        cvContent: {
             type: String,
         },
         coinsSpent: {

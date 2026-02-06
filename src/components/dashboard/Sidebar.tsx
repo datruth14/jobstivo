@@ -19,7 +19,6 @@ interface SidebarProps {
 
 const navItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "available_jobs", label: "Available Jobs", icon: Briefcase },
     { id: "jobs", label: "Jobs Applied", icon: History },
     { id: "cv", label: "My CV", icon: FileText },
     { id: "wallet", label: "Coin Wallet", icon: Wallet },

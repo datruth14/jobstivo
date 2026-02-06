@@ -2,6 +2,10 @@
 
 import OpenAI from "openai";
 import { marked } from "marked";
+import connectDB from "@/lib/mongodb";
+import User, { ICV } from "@/models/User";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -146,6 +150,84 @@ export async function improveUploadedCV(cvContent: string) {
         return {
             success: false,
             error: error.message || "Failed to improve CV",
+        };
+    }
+}
+
+export async function generateAndSaveCV(userCV: string, jobDescription: string, jobTitle: string) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session || !session.user?.email) {
+            return { success: false, error: "Unauthorized" };
+        }
+
+        // 1. Generate the CV using the existing logic (reusing the prompt or calling the internal helper if we refactored, but here I'll inline/call tailorAndApply logic)
+        // Actually, let's reuse tailorAndApply but we need just the CV part, or we can just call the OpenAI API similarly.
+        // Let's use the same prompt structure as tailorAndApply for consistency.
+
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [
+                {
+                    role: "system",
+                    content: `You are an expert career coach. Your task is to rewriting the user's CV to perfectly match the provided Job Description.
+                    
+                    CRITICAL INSTRUCTIONS:
+                    1. **Aggressive Tailoring**: Do not just copy the old CV. Rewrite specific bullet points to use keywords from the job description.
+                    2. **Skills Alignment**: Reorder skills. If the user has a skill that matches the job, highlight it. 
+                    3. **Professional Summary**: Completely rewrite the summary to pitch the candidate specifically for THIS job.
+                    4. **HTML Format**: Return the result as a full, structured HTML document (without <html>/<body> tags).
+                    
+                    HTML RULES:
+                    - Use <h1> for the candidate's name.
+                    - Use <h2> for section headers (Summary, Experience, Education, Skills).
+                    - Use <ul>/<li> for lists.
+                    - Use <p> for paragraphs.
+                    - Use <strong> for emphasis.
+                    - NO Markdown syntax.
+                    `,
+                },
+                {
+                    role: "user",
+                    content: `CANDIDATE CV:\n${userCV}\n\nTARGET JOB DESCRIPTION:\n${jobDescription}`,
+                },
+            ],
+        });
+
+        let content = response.choices[0].message.content || "";
+        content = content.replace(/```(markdown)?/g, "").trim();
+        const htmlCV = await marked.parse(content);
+
+        // 2. Save to User Profile
+        await connectDB();
+        const user = await User.findOne({ email: session.user.email });
+        if (!user) return { success: false, error: "User not found" };
+
+        const newCV: ICV = {
+            name: jobTitle || `CV for ${new Date().toLocaleDateString()}`,
+            content: htmlCV,
+            isDefault: false,
+            createdAt: new Date(),
+            updatedAt: new Date()
+        };
+
+        user.cvs.push(newCV);
+        await user.save();
+
+        // Get the ID of the newly saved CV (it's the last one)
+        const savedCV = user.cvs[user.cvs.length - 1];
+
+        return {
+            success: true,
+            cvId: savedCV._id.toString(),
+            cvContent: htmlCV
+        };
+
+    } catch (error: any) {
+        console.error("OpenAI Error:", error);
+        return {
+            success: false,
+            error: error.message || "Failed to generate and save CV",
         };
     }
 }

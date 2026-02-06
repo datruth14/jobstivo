@@ -58,7 +58,14 @@ export async function POST(request: NextRequest) {
 
         const application = await Application.create({
             userId: user._id,
-            ...body,
+            jobId: body.jobId,
+            jobTitle: body.jobTitle,
+            company: body.company,
+            coverLetter: body.coverLetter,
+            cvContent: body.cvContent, // Save the tailored CV
+            applyLink: body.applyLink,
+            coinsSpent: body.coinsSpent,
+            status: body.status || 'applied',
         });
 
         return NextResponse.json({ success: true, application });

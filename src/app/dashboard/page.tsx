@@ -51,52 +51,11 @@ function DashboardContent() {
     switch (activeTab) {
       case "dashboard":
         return (
-          <div className="p-4 lg:p-8 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-            {/* Left Column: CV Management */}
-            <div className="lg:col-span-12 xl:col-span-5 space-y-6 lg:space-y-8">
-              <section className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <Wand2 className="w-5 h-5 text-blue-500" />
-                  <h2 className="text-lg font-bold">Preparation</h2>
-                </div>
-
-                <div className="space-y-6">
-                  <FileUpload onUpload={async (content) => {
-                    const name = `CV ${new Date().toLocaleDateString()}`;
-                    await createCV(name, content);
-                    handleUploadSuccess();
-                  }} />
-
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-slate-900" />
-                    </div>
-                    <div className="relative flex justify-center text-[10px] lg:text-xs uppercase">
-                      <span className="bg-slate-950 px-2 text-slate-500 font-bold">Or generate manually</span>
-                    </div>
-                  </div>
-
-                  <ManualForm onCVGenerated={async (content) => {
-                    const name = `AI CV ${new Date().toLocaleDateString()}`;
-                    await createCV(name, content);
-                    handleUploadSuccess();
-                  }} />
-                </div>
-              </section>
-            </div>
-
-            {/* Right Column: Job Feed */}
-            <div className="lg:col-span-12 xl:col-span-7">
-              <JobFeed
-                userCV={userCV}
-                onApplySuccess={handleApplySuccess}
-                onViewMore={() => setActiveTab("available_jobs")}
-              />
-            </div>
+          <div className="p-4 lg:p-8 max-w-6xl mx-auto space-y-8">
+            {/* Main Job Search - Now the primary/only view on Dashboard */}
+            <AvailableJobsView userCV={userCV} onApplySuccess={handleApplySuccess} />
           </div>
         );
-      case "available_jobs":
-        return <AvailableJobsView userCV={userCV} onApplySuccess={handleApplySuccess} />;
       case "wallet":
         return <WalletView />;
       case "cv":

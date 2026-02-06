@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { Building2, MapPin, DollarSign, Send, Briefcase, Loader2 } from "lucide-react";
-import { JobApplicationModal, Job } from "@/components/dashboard/JobApplicationModal";
+import { Job } from "@/components/dashboard/JobApplicationModal"; // Keep interface for now or move it
 import { getJobs, JSearchJob } from "@/app/actions/jobs";
+import Link from "next/link";
 
 
 export const JobCard = ({ job, onClick }: { job: Job; onClick: () => void }) => {
@@ -35,13 +36,13 @@ export const JobCard = ({ job, onClick }: { job: Job; onClick: () => void }) => 
                 {job.description}
             </p>
 
-            <button
-                onClick={onClick}
+            <Link
+                href={`/dashboard/jobs/${job.id}`}
                 className="w-full flex items-center justify-center gap-2 py-3 bg-white text-slate-950 hover:bg-slate-200 rounded-xl font-bold transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-white/20"
             >
                 <Send className="w-4 h-4" />
-                <span className="text-xs uppercase tracking-widest font-black">Apply Now (50 Coins)</span>
-            </button>
+                <span className="text-xs uppercase tracking-widest font-black">View & Apply</span>
+            </Link>
         </div>
     );
 };
@@ -130,13 +131,7 @@ export const JobFeed = ({ userCV, onApplySuccess, onViewMore }: { userCV: string
                 )}
             </div>
 
-            <JobApplicationModal
-                job={selectedJob}
-                isOpen={!!selectedJob}
-                onClose={() => setSelectedJob(null)}
-                userCV={userCV}
-                onApplySuccess={onApplySuccess}
-            />
+
         </div>
     );
 };

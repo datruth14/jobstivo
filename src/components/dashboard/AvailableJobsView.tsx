@@ -4,8 +4,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Search, MapPin, DollarSign, Filter, Loader2, Briefcase, ChevronDown, CheckCircle, Send, Wand2, ExternalLink, Sparkles } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { JobApplicationModal, Job as ModalJob } from "@/components/dashboard/JobApplicationModal";
+import { Job as ModalJob } from "@/components/dashboard/JobApplicationModal"; // Keep interface
 import { getJobs, JSearchJob } from "@/app/actions/jobs";
+import Link from "next/link";
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -26,13 +27,13 @@ export function AvailableJobsView({ userCV, onApplySuccess }: { userCV: string |
     const [hasMore, setHasMore] = useState(true);
 
     // Input State
-    const [searchTerm, setSearchTerm] = useState("Developer");
+    const [searchTerm, setSearchTerm] = useState("");
     const [locationFilter, setLocationFilter] = useState("");
     const [typeFilter, setTypeFilter] = useState("All Types");
 
     // Applied Filter State
     const [appliedFilters, setAppliedFilters] = useState({
-        search: "Developer",
+        search: "",
         location: "",
         type: "All Types"
     });
@@ -67,12 +68,18 @@ export function AvailableJobsView({ userCV, onApplySuccess }: { userCV: string |
 
 
     const fetchJobs = async () => {
+        // If search is empty, don't fetch anything initially
+        if (!appliedFilters.search) {
+            setLoading(false);
+            return;
+        }
+
         if (!hasMore && page > 1) return;
 
         setLoading(true);
         try {
             const result = await getJobs(
-                appliedFilters.search || "Developer",
+                appliedFilters.search,
                 page,
                 appliedFilters.location
             ) as any; // Cast for custom fields
@@ -232,13 +239,13 @@ export function AvailableJobsView({ userCV, onApplySuccess }: { userCV: string |
                             </p>
 
                             <div className="flex gap-3">
-                                <button
-                                    onClick={() => setSelectedJob(job)}
+                                <Link
+                                    href={`/dashboard/jobs/${job.id}`}
                                     className="flex-1 py-3 bg-white text-slate-950 hover:bg-slate-100 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 active:scale-95 shadow-xl"
                                 >
                                     <Send className="w-4 h-4" />
-                                    Apply Now
-                                </button>
+                                    View & Apply
+                                </Link>
                             </div>
                         </div>
                     )
@@ -265,32 +272,39 @@ export function AvailableJobsView({ userCV, onApplySuccess }: { userCV: string |
                     <div className="w-16 h-16 bg-slate-800/50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-slate-500">
                         <Briefcase className="w-8 h-8" />
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-2">No Jobs Found</h3>
-                    <p className="text-slate-400 max-w-sm mx-auto mb-8">
-                        No jobs match your current filters. Try adjusting your search criteria.
-                    </p>
-                    <button
-                        onClick={() => {
-                            setAppliedFilters({ search: "Developer", location: "", type: "All Types" });
-                            setSearchTerm("Developer");
-                            setLocationFilter("");
-                            setPage(1);
-                            setHasMore(true);
-                        }}
-                        className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all active:scale-95"
-                    >
-                        Reset Filters
-                    </button>
+                    {/* Different message if search is empty vs no results found for query */}
+                    {!appliedFilters.search ? (
+                        <>
+                            <h3 className="text-xl font-bold text-white mb-2">Ready to Search</h3>
+                            <p className="text-slate-400 max-w-sm mx-auto mb-8">
+                                Enter a job title above to find your next opportunity.
+                            </p>
+                        </>
+                    ) : (
+                        <>
+                            <h3 className="text-xl font-bold text-white mb-2">No Jobs Found</h3>
+                            <p className="text-slate-400 max-w-sm mx-auto mb-8">
+                                No jobs match your current filters. Try adjusting your search criteria.
+                            </p>
+                            <button
+                                onClick={() => {
+                                    setAppliedFilters({ search: "", location: "", type: "All Types" });
+                                    setSearchTerm("");
+                                    setLocationFilter("");
+                                    setPage(1);
+                                    setHasMore(true);
+                                    setJobs([]);
+                                }}
+                                className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all active:scale-95"
+                            >
+                                Clear Search
+                            </button>
+                        </>
+                    )}
                 </div>
             )}
 
-            <JobApplicationModal
-                job={selectedJob}
-                isOpen={!!selectedJob}
-                onClose={() => setSelectedJob(null)}
-                userCV={userCV}
-                onApplySuccess={onApplySuccess}
-            />
+
         </div>
     );
 }

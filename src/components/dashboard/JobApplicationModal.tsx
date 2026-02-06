@@ -3,8 +3,9 @@
 import { useWallet } from "@/context/WalletContext";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
-import { Building2, MapPin, DollarSign, Loader2, Send, X, Sparkles } from "lucide-react";
+import { Building2, MapPin, DollarSign, Loader2, Send, X, Sparkles, Wand2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
+import { tailorAndApply } from "@/app/actions/openai";
 
 
 export interface Job {
@@ -28,6 +29,7 @@ interface JobApplicationModalProps {
 export function JobApplicationModal({ job, isOpen, onClose, userCV, onApplySuccess }: JobApplicationModalProps) {
     const { data: session } = useSession();
     const [applying, setApplying] = useState(false);
+    const [generating, setGenerating] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { deductCoins, incrementJobsApplied } = useWallet();
 
@@ -80,6 +82,66 @@ export function JobApplicationModal({ job, isOpen, onClose, userCV, onApplySucce
         } catch (err: any) {
             setError("Failed to save application: " + err.message);
             setApplying(false);
+        }
+    };
+
+    const handleGenerateAndApply = async () => {
+        if (!job) return;
+        setError(null);
+
+        if (!userCV) {
+            setError("No CV found. Please go to the Dashboard to generate or upload your CV first.");
+            return;
+        }
+
+        if (!deductCoins(50)) {
+            setError("Insufficient coins! You need 50 coins to generate and apply.");
+            return;
+        }
+
+        setGenerating(true);
+
+        try {
+            // 1. Generate Tailored CV and Cover Letter
+            const result = await tailorAndApply(userCV, job.description);
+
+            if (!result.success || !result.tailoredCV) {
+                throw new Error(result.error || "Failed to generate tailored CV");
+            }
+
+            // 2. Save application with generated content
+            await fetch('/api/applications', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jobId: job.id,
+                    jobTitle: job.title,
+                    company: job.company,
+                    coverLetter: result.coverLetter || 'Applied via Jobstivo',
+                    cvContent: result.tailoredCV,
+                    applyLink: job.applyLink,
+                    coinsSpent: 50,
+                    status: 'applied',
+                }),
+            });
+
+            incrementJobsApplied();
+
+            // 3. Open job application page
+            if (job.applyLink) {
+                window.open(job.applyLink, '_blank');
+            }
+
+            // 4. Show success
+            setTimeout(() => {
+                onApplySuccess(result.coverLetter || "Applied with Tailored CV", job.applyLink);
+                setGenerating(false);
+                onClose();
+            }, 500);
+
+        } catch (err: any) {
+            setError("Failed to generate and apply: " + err.message);
+            setGenerating(false);
         }
     };
 
@@ -147,6 +209,23 @@ export function JobApplicationModal({ job, isOpen, onClose, userCV, onApplySucce
                                     {error}
                                 </div>
                             )}
+                            <button
+                                onClick={handleGenerateAndApply}
+                                disabled={applying || generating}
+                                className="w-full group relative flex items-center justify-center gap-3 py-5 mb-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl font-black text-lg transition-all hover:from-indigo-500 hover:to-purple-500 shadow-xl shadow-purple-600/20 active:scale-[0.98] overflow-hidden"
+                            >
+                                {generating ? (
+                                    <div className="flex items-center gap-3">
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        <span className="uppercase tracking-[0.1em]">Tailoring CV...</span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <Wand2 className="w-5 h-5 group-hover:rotate-12 transition-transform" />
+                                        <span className="uppercase tracking-[0.1em]">Generate Tailored CV & Apply</span>
+                                    </>
+                                )}
+                            </button>
                             <button
                                 onClick={handleApply}
                                 disabled={applying}
