@@ -154,7 +154,8 @@ export async function improveUploadedCV(cvContent: string) {
     }
 }
 
-export async function generateAndSaveCV(userCV: string, jobDescription: string, jobTitle: string) {
+// REFACTORED: Now accepts userName and userEmail instead of userCV content
+export async function generateAndSaveCV(userName: string, userEmail: string, jobDescription: string, jobTitle: string) {
     try {
         const session = await getServerSession(authOptions);
         if (!session || !session.user?.email) {
@@ -170,26 +171,39 @@ export async function generateAndSaveCV(userCV: string, jobDescription: string, 
             messages: [
                 {
                     role: "system",
-                    content: `You are an expert career coach. Your task is to rewriting the user's CV to perfectly match the provided Job Description.
+                    content: `You are an expert career coach and resume writer. 
+                    Your task is to allow the user to apply for a specific job by generating a professional, tailored CV from scratch.
+
+                    CANDIDATE DETAILS:
+                    Name: ${userName}
+                    Email: ${userEmail}
                     
+                    TARGET JOB:
+                    ${jobDescription}
+
                     CRITICAL INSTRUCTIONS:
-                    1. **Aggressive Tailoring**: Do not just copy the old CV. Rewrite specific bullet points to use keywords from the job description.
-                    2. **Skills Alignment**: Reorder skills. If the user has a skill that matches the job, highlight it. 
-                    3. **Professional Summary**: Completely rewrite the summary to pitch the candidate specifically for THIS job.
+                    1. **Create From Scratch**: The user has NOT provided a base CV. You must generate a realistic, high-quality CV that makes this candidate look like a strong fit for the target job.
+                    2. **Infer Skills/Experience**: Based on the job description, infer the likely skills and experience a qualified candidate would have, and write them into the CV. Use realistic placeholders if absolutely necessary, but prefer generating plausible content that matches the job requirements (e.g., "5+ years of experience in..." logic).
+                    3. **Structure**: 
+                       - Header: Name and Email (and placeholder phone/location).
+                       - Professional Summary: Pitched directly for this role.
+                       - Experience: Recent relevant roles (generate generic but impressive titles like "Senior [Job Role]" at "Tech Solutions Inc").
+                       - Skills: List skills found in the JD.
+                       - Education: Generic degree relevant to the field.
+
                     4. **HTML Format**: Return the result as a full, structured HTML document (without <html>/<body> tags).
                     
                     HTML RULES:
-                    - Use <h1> for the candidate's name.
-                    - Use <h2> for section headers (Summary, Experience, Education, Skills).
+                    - Use <h1> for candidate name.
+                    - Use <h2> for section headers.
                     - Use <ul>/<li> for lists.
                     - Use <p> for paragraphs.
-                    - Use <strong> for emphasis.
-                    - NO Markdown syntax.
+                    - NO Markdown.
                     `,
                 },
                 {
                     role: "user",
-                    content: `CANDIDATE CV:\n${userCV}\n\nTARGET JOB DESCRIPTION:\n${jobDescription}`,
+                    content: `Please generate a CV for ${userName} (${userEmail}) applying for the role of ${jobTitle}.`,
                 },
             ],
         });

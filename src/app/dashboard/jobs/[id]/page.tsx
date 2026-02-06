@@ -62,21 +62,19 @@ export default function JobApplicationPage() {
 
     const handleGenerateCV = async () => {
         if (!job) return;
-        if (!userCV) {
-            setError("No base CV found. Please upload or generate a base CV in the dashboard first.");
-            return;
-        }
-
         if (!deductCoins(200)) {
             setError("Insufficient coins! You need 200 coins to generate a tailored CV.");
             return;
         }
 
+        const userName = session?.user?.name || "Candidate";
+        const userEmail = session?.user?.email || "candidate@example.com";
+
         setGenerating(true);
         setError(null);
 
         try {
-            const result = await generateAndSaveCV(userCV, job.job_description, job.job_title);
+            const result = await generateAndSaveCV(userName, userEmail, job.job_description, job.job_title);
 
             if (result.success && result.cvContent) {
                 setCvContent(result.cvContent);
